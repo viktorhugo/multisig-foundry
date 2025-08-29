@@ -33,6 +33,17 @@ contract SimpleERC20Multisig {
     // Format: transactionId => owner => hasConfirmed
     mapping(uint256 => mapping(address => bool)) public hasConfirmed;
 
+    // --- Events ---
+    event Deposit(address indexed sender, uint256 amount);
+    event SubmitTransaction(
+        address indexed owner,
+        uint256 indexed txId,
+        address indexed to,
+        uint256 amount
+    );
+    event ConfirmTransaction(address indexed owner, uint256 indexed txId);
+    event ExecuteTransaction(address indexed owner, uint256 indexed txId);
+
     //_threshold is the number of owners that need to confirm
     constructor(address[] memory _owners, uint256 _threshold, address _token) {
         // Basic validation
@@ -69,6 +80,7 @@ contract SimpleERC20Multisig {
         IERC20(token).transferFrom(msg.sender, address(this), amount);
         // uint256 tokenBalance = IERC20(token).balanceOf(address(this));
         tokenBalance += amount;
+        emit Deposit(msg.sender, amount);
     }
 
     /**
@@ -100,6 +112,7 @@ contract SimpleERC20Multisig {
 
         // Return the index of the new transaction
         txId = transactions.length - 1;
+        emit SubmitTransaction(msg.sender, txId, to, amount);
     }
 
     /**
@@ -125,6 +138,7 @@ contract SimpleERC20Multisig {
         // Record the confirmation
         hasConfirmed[txId][msg.sender] = true;
         transactions[txId].confirmations += 1;
+        emit ConfirmTransaction(msg.sender, txId);
     }
 
     /**
@@ -151,5 +165,6 @@ contract SimpleERC20Multisig {
         // Send the tokens and update balance
         IERC20(token).transfer(txn.to, txn.amount);
         tokenBalance -= txn.amount;
+        emit ExecuteTransaction(msg.sender, txId);
     }
 }
