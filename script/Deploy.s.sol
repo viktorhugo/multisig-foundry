@@ -52,31 +52,54 @@ contract Deploy is Script {
     /**
      * @notice Get owner addresses (hardcoded for local deployment)
      */
-    function getOwners() internal pure returns (address[] memory) {
-        // Use hardcoded owner addresses for local deployment
-        console.log("Using locally configured owner addresses");
-        address[] memory owners = new address[](3);
-        owners[0] = 0xd56279982a6363aD04d8DF8965F4702554AD0553;
-        owners[1] = 0x787EC23276D87DF482553A1C03bD9C8DB52F4bda;
-        owners[2] = 0x9AFe124c2eB056F5104b82134B3f6F1F30422612;
+    function getOwners() internal view returns (address[] memory) {
+        string memory ownersStr = vm.envString("OWNERS");
+        require(bytes(ownersStr).length > 0, "OWNERS env var not set");
+        string[] memory ownersArr = new string[](10);
+        uint count = 0;
+        bytes memory ownersBytes = bytes(ownersStr);
+        uint start = 0;
+        for(uint i=0; i<ownersBytes.length; i++){
+            if(ownersBytes[i] == ','){
+                ownersArr[count] = new string(i-start);
+                bytes memory owner = bytes(ownersArr[count]);
+                for(uint j=0; j<owner.length; j++){
+                    owner[j] = ownersBytes[start+j];
+                }
+                count++;
+                start = i+1;
+            }
+        }
+        ownersArr[count] = new string(ownersBytes.length-start);
+        bytes memory ownerBytes = bytes(ownersArr[count]);
+        for(uint j=0; j<ownerBytes.length; j++){
+            ownerBytes[j] = ownersBytes[start+j];
+        }
+        count++;
+
+        address[] memory owners = new address[](count);
+        for(uint i=0; i<count; i++){
+            owners[i] = vm.parseAddress(ownersArr[i]);
+        }
+
         return owners;
     }
 
     /**
-     * @notice Get threshold (hardcoded for local deployment)
+     * @notice Get threshold from environment variable
      */
-    function getThreshold() internal pure returns (uint256) {
-        // Use hardcoded threshold for local deployment
-        console.log("Using locally configured threshold: 2");
-        return 2;
+    function getThreshold() internal view returns (uint256) {
+        uint256 threshold = vm.envUint("THRESHOLD");
+        require(threshold > 0, "THRESHOLD env var not set");
+        return threshold;
     }
 
     /**
-     * @notice Get token address (hardcoded for local deployment)
+     * @notice Get token address from environment variable
      */
-    function getTokenAddress() internal pure returns (address) {
-        // Use hardcoded token address for local deployment (cUSD on Alfajores)
-        console.log("Using locally configured token: cUSD on Alfajores");
-        return 0xe6A57340f0df6E020c1c0a80bC6E13048601f0d4;
+    function getTokenAddress() internal view returns (address) {
+        address tokenAddress = vm.envAddress("TOKEN_ADDRESS");
+        require(tokenAddress != address(0), "TOKEN_ADDRESS env var not set");
+        return tokenAddress;
     }
 }

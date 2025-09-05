@@ -60,7 +60,8 @@ contract SimpleERC20MultisigTest is Test {
             address to,
             uint256 amount,
             bool executed,
-            uint256 confirmations
+            uint256 confirmations,
+            uint256 createdAt
         ) = multisig.transactions(txId);
 
         assertEq(to, recipient);
@@ -74,7 +75,7 @@ contract SimpleERC20MultisigTest is Test {
 
         // Verify first confirmation
         assertTrue(multisig.hasConfirmed(txId, owner1));
-        (, , , confirmations) = multisig.transactions(txId);
+        (, , , confirmations, ) = multisig.transactions(txId);
         assertEq(confirmations, 1);
 
         // 4. Second owner confirms (reaches threshold of 2)
@@ -83,7 +84,7 @@ contract SimpleERC20MultisigTest is Test {
 
         // Verify second confirmation
         assertTrue(multisig.hasConfirmed(txId, owner2));
-        (, , , confirmations) = multisig.transactions(txId);
+        (, , , confirmations, ) = multisig.transactions(txId);
         assertEq(confirmations, 2);
 
         // 5. Execute the transaction
@@ -93,7 +94,7 @@ contract SimpleERC20MultisigTest is Test {
         multisig.executeTransaction(txId);
 
         // 6. Verify final state - all balances and transaction status
-        (, , executed, ) = multisig.transactions(txId);
+        (, , executed, , ) = multisig.transactions(txId);
         assertTrue(executed);
         assertEq(multisig.tokenBalance(), depositAmount - transferAmount);
         assertEq(

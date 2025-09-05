@@ -25,6 +25,7 @@ contract SimpleERC20Multisig {
         uint256 amount; // How many tokens to send
         bool executed; // Has this been executed?
         uint256 confirmations; // How many owners approved this
+        uint256 createdAt; // Timestamp when transaction was created
     }
 
     Transaction[] public transactions;
@@ -32,6 +33,9 @@ contract SimpleERC20Multisig {
     // Track which owners confirmed which transactions
     // Format: transactionId => owner => hasConfirmed
     mapping(uint256 => mapping(address => bool)) public hasConfirmed;
+    // Track when each owner confirmed each transaction
+    // Format: transactionId => owner => confirmationTimestamp
+    mapping(uint256 => mapping(address => uint256)) public confirmationTimestamps;
 
     // --- Events ---
     event Deposit(address indexed sender, uint256 amount);
@@ -39,9 +43,10 @@ contract SimpleERC20Multisig {
         address indexed owner,
         uint256 indexed txId,
         address indexed to,
-        uint256 amount
+        uint256 amount,
+        uint256 timestamp
     );
-    event ConfirmTransaction(address indexed owner, uint256 indexed txId);
+    event ConfirmTransaction(address indexed owner, uint256 indexed txId, uint256 timestamp);
     event ExecuteTransaction(address indexed owner, uint256 indexed txId);
 
     //_threshold is the number of owners that need to confirm
@@ -106,13 +111,14 @@ contract SimpleERC20Multisig {
                 to: to,
                 amount: amount,
                 executed: false,
-                confirmations: 0
+                confirmations: 0,
+                createdAt: block.timestamp
             })
         );
 
         // Return the index of the new transaction
         txId = transactions.length - 1;
-        emit SubmitTransaction(msg.sender, txId, to, amount);
+        emit SubmitTransaction(msg.sender, txId, to, amount, block.timestamp);
     }
 
     /**
@@ -129,16 +135,11 @@ contract SimpleERC20Multisig {
             "Already confirmed by this owner"
         );
 
-        // Check if enough owners have confirmed
-        // require(
-        //     transactions[txId].confirmations + 1 >= threshold,
-        //     "Not enough owners have confirmed"
-        // );
-
         // Record the confirmation
         hasConfirmed[txId][msg.sender] = true;
+        confirmationTimestamps[txId][msg.sender] = block.timestamp;
         transactions[txId].confirmations += 1;
-        emit ConfirmTransaction(msg.sender, txId);
+        emit ConfirmTransaction(msg.sender, txId, block.timestamp);
     }
 
     /**
